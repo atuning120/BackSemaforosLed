@@ -39,5 +39,5 @@ jobs:
           push: ${{ github.event_name == 'push' }}
           # Formato de la URL: ghcr.io/USUARIO/NOMBRE_IMAGEN:TAG
           # El nombre debe ir todo en minúsculas
-          tags: ghcr.io/${{ github.repository_owner }}/miniecommerce-back:latest
+          tags: ghcr.io/${{ github.repository_owner }}/semaforosled-back:latest
 

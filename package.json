@@ -1,0 +1,43 @@
+{
+  "name": "back",
+  "version": "1.0.0",
+  "description": "",
+  "main": "index.js",
+  "scripts": {
+    "test": "jest --forceExit",
+    "test:coverage": "jest --coverage --forceExit",
+    "start": "node index.js",
+    "dev": "nodemon index.js",
+    "seed:hogar-electronico": "node scripts/seedHogarElectronico.js"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/atuning120/BackMiniArgentina.git"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "type": "commonjs",
+  "bugs": {
+    "url": "https://github.com/atuning120/BackMiniArgentina/issues"
+  },
+  "homepage": "https://github.com/atuning120/BackMiniArgentina#readme",
+  "dependencies": {
+    "cors": "^2.8.6",
+    "dotenv": "^16.4.5",
+    "express": "^5.2.1",
+    "express-mongo-sanitize": "^2.2.0",
+    "express-rate-limit": "^8.5.2",
+    "helmet": "^8.2.0",
+    "mongodb": "^7.2.0",
+    "multer": "^2.1.1",
+    "nodemailer": "^8.0.9",
+    "redis": "^5.12.1",
+    "sharp": "^0.34.5"
+  },
+  "devDependencies": {
+    "jest": "^30.4.2",
+    "nodemon": "^3.1.14",
+    "supertest": "^7.2.2"
+  }
+}

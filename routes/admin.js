@@ -11,6 +11,11 @@ const {
   listAdminOrdersHandler,
   updateAdminOrderHandler,
 } = require('../controllers/adminController');
+const {
+  createHeroScreenHandler,
+  updateHeroScreenHandler,
+  deleteHeroScreenHandler,
+} = require('../controllers/heroController');
 const { adminAuth } = require('../middleware/adminAuth');
 
 const router = express.Router();
@@ -27,6 +32,10 @@ router.post('/ordenes', adminAuth, createAdminOrderHandler);
 router.post('/ordenes/resolve', adminAuth, resolveAdminOrderPayload);
 router.get('/ordenes', adminAuth, listAdminOrdersHandler);
 router.patch('/ordenes/:id', adminAuth, updateAdminOrderHandler);
+
+router.post('/hero', adminAuth, createHeroScreenHandler);
+router.patch('/hero/:id', adminAuth, updateHeroScreenHandler);
+router.delete('/hero/:id', adminAuth, deleteHeroScreenHandler);
 
 const fs = require('fs');
 const path = require('path');

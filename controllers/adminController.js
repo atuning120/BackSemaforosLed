@@ -30,11 +30,6 @@ function normalizeProductPayload(
     result.descripcion = payload.descripcion || '';
   }
 
-  if (!partial || hasKey('precio')) {
-    const price = Number(payload.precio);
-    result.precio = Number.isFinite(price) ? price : 0;
-  }
-
   if (!partial || hasKey('categoria')) {
     const normalizedCategory = normalizeCategory(payload.categoria || '');
     result.categoria = DEFAULT_CATEGORIES.includes(normalizedCategory)
@@ -48,6 +43,10 @@ function normalizeProductPayload(
 
   if (!partial || hasKey('imagen')) {
     result.imagen = payload.imagen || '';
+  }
+
+  if (!partial || hasKey('imagenes')) {
+    result.imagenes = Array.isArray(payload.imagenes) ? payload.imagenes : [];
   }
 
   if (!partial || hasKey('en_oferta')) {
@@ -154,7 +153,8 @@ async function updateAdminCredentialsHandler(req, res) {
 async function getAdminHogarElectronico(req, res) {
   try {
     const productos = await getHogarElectronicoProducts();
-    res.json(productos);
+    const sanitized = productos.map(({ precio, ...rest }) => rest);
+    res.json(sanitized);
   } catch (error) {
     console.error('Error fetching products:', error);
     res.status(500).json({ error: 'Error fetching products' });
@@ -171,7 +171,8 @@ async function createAdminHogarElectronico(req, res) {
 
   try {
     const created = await createHogarElectronicoProduct(product);
-    return res.status(201).json(created);
+    const { precio, ...sanitized } = created || {};
+    return res.status(201).json(sanitized);
   } catch (error) {
     console.error('Error creating product:', error);
     return res.status(500).json({ error: 'Error creating product' });
@@ -206,17 +207,36 @@ async function updateAdminHogarElectronico(req, res) {
       return res.status(404).json({ error: 'Producto no encontrado' });
     }
 
-    if (existingProduct && existingProduct.imagen !== updated.imagen) {
-      if (existingProduct.imagen && existingProduct.imagen.includes('/uploads/')) {
-        const filename = existingProduct.imagen.split('/uploads/')[1];
+    const extractFilename = (url) => {
+      if (url && url.includes('/uploads/')) {
+        return url.split('/uploads/')[1];
+      }
+      return null;
+    };
+
+    const deleteImage = (url) => {
+      const filename = extractFilename(url);
+      if (filename) {
         const filePath = path.join(__dirname, '../uploads', filename);
         fs.unlink(filePath, (err) => {
           if (err && err.code !== 'ENOENT') console.error('Error deleting old image:', err);
         });
       }
+    };
+
+    if (existingProduct) {
+      const oldImages = [existingProduct.imagen, ...(existingProduct.imagenes || [])].filter(Boolean);
+      const newImages = [updated.imagen, ...(updated.imagenes || [])].filter(Boolean);
+
+      oldImages.forEach(oldImg => {
+        if (!newImages.includes(oldImg)) {
+          deleteImage(oldImg);
+        }
+      });
     }
 
-    return res.json(updated);
+    const { precio, ...sanitized } = updated || {};
+    return res.json(sanitized);
   } catch (error) {
     console.error('Error updating product:', error);
     return res.status(500).json({ error: 'Error updating product' });
@@ -235,13 +255,25 @@ async function deleteAdminHogarElectronico(req, res) {
       return res.status(404).json({ error: 'Producto no encontrado' });
     }
 
-    if (deletedProduct.imagen && deletedProduct.imagen.includes('/uploads/')) {
-      const filename = deletedProduct.imagen.split('/uploads/')[1];
-      const filePath = path.join(__dirname, '../uploads', filename);
-      fs.unlink(filePath, (err) => {
-        if (err && err.code !== 'ENOENT') console.error('Error deleting image:', err);
-      });
-    }
+    const extractFilename = (url) => {
+      if (url && url.includes('/uploads/')) {
+        return url.split('/uploads/')[1];
+      }
+      return null;
+    };
+
+    const deleteImage = (url) => {
+      const filename = extractFilename(url);
+      if (filename) {
+        const filePath = path.join(__dirname, '../uploads', filename);
+        fs.unlink(filePath, (err) => {
+          if (err && err.code !== 'ENOENT') console.error('Error deleting image:', err);
+        });
+      }
+    };
+
+    const imagesToDelete = [deletedProduct.imagen, ...(deletedProduct.imagenes || [])].filter(Boolean);
+    imagesToDelete.forEach(deleteImage);
 
     return res.status(204).send();
   } catch (error) {
@@ -261,9 +293,15 @@ async function createAdminOrderHandler(req, res) {
       sku: item.sku,
       name: item.name || '',
       quantity: Number(item.quantity) || 0,
-      price: Number(item.price) || 0,
+      price: Number(item.price),
     }))
-    .filter((item) => item.sku && item.quantity > 0);
+    .filter(
+      (item) =>
+        item.sku &&
+        item.quantity > 0 &&
+        Number.isFinite(item.price) &&
+        item.price >= 0
+    );
 
   if (normalizedItems.length === 0) {
     return res.status(400).json({ error: 'Items are invalid' });
@@ -350,7 +388,6 @@ async function resolveAdminOrderPayload(req, res) {
         sku: product.sku,
         nombre: product.nombre || '',
         cantidad: quantity,
-        precio: Number(product.precio) || 0,
         moneda: product.moneda || 'ARS',
       });
     });

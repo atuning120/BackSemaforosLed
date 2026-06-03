@@ -7,7 +7,8 @@ async function getHogarElectronico(req, res) {
     const skip = (page - 1) * limit;
 
     const productos = await getHogarElectronicoProducts(skip, limit);
-    res.json(productos);
+    const sanitized = productos.map(({ precio, ...rest }) => rest);
+    res.json(sanitized);
   } catch (error) {
     console.error('Error fetching products:', error);
     res.status(500).json({ error: 'Error fetching products', details: error.message });

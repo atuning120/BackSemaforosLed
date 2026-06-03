@@ -45,6 +45,10 @@ function normalizeProductPayload(
     result.imagen = payload.imagen || '';
   }
 
+  if (!partial || hasKey('imagenes')) {
+    result.imagenes = Array.isArray(payload.imagenes) ? payload.imagenes : [];
+  }
+
   if (!partial || hasKey('en_oferta')) {
     result.en_oferta = Boolean(payload.en_oferta);
   }
@@ -203,14 +207,32 @@ async function updateAdminHogarElectronico(req, res) {
       return res.status(404).json({ error: 'Producto no encontrado' });
     }
 
-    if (existingProduct && existingProduct.imagen !== updated.imagen) {
-      if (existingProduct.imagen && existingProduct.imagen.includes('/uploads/')) {
-        const filename = existingProduct.imagen.split('/uploads/')[1];
+    const extractFilename = (url) => {
+      if (url && url.includes('/uploads/')) {
+        return url.split('/uploads/')[1];
+      }
+      return null;
+    };
+
+    const deleteImage = (url) => {
+      const filename = extractFilename(url);
+      if (filename) {
         const filePath = path.join(__dirname, '../uploads', filename);
         fs.unlink(filePath, (err) => {
           if (err && err.code !== 'ENOENT') console.error('Error deleting old image:', err);
         });
       }
+    };
+
+    if (existingProduct) {
+      const oldImages = [existingProduct.imagen, ...(existingProduct.imagenes || [])].filter(Boolean);
+      const newImages = [updated.imagen, ...(updated.imagenes || [])].filter(Boolean);
+
+      oldImages.forEach(oldImg => {
+        if (!newImages.includes(oldImg)) {
+          deleteImage(oldImg);
+        }
+      });
     }
 
     const { precio, ...sanitized } = updated || {};
@@ -233,13 +255,25 @@ async function deleteAdminHogarElectronico(req, res) {
       return res.status(404).json({ error: 'Producto no encontrado' });
     }
 
-    if (deletedProduct.imagen && deletedProduct.imagen.includes('/uploads/')) {
-      const filename = deletedProduct.imagen.split('/uploads/')[1];
-      const filePath = path.join(__dirname, '../uploads', filename);
-      fs.unlink(filePath, (err) => {
-        if (err && err.code !== 'ENOENT') console.error('Error deleting image:', err);
-      });
-    }
+    const extractFilename = (url) => {
+      if (url && url.includes('/uploads/')) {
+        return url.split('/uploads/')[1];
+      }
+      return null;
+    };
+
+    const deleteImage = (url) => {
+      const filename = extractFilename(url);
+      if (filename) {
+        const filePath = path.join(__dirname, '../uploads', filename);
+        fs.unlink(filePath, (err) => {
+          if (err && err.code !== 'ENOENT') console.error('Error deleting image:', err);
+        });
+      }
+    };
+
+    const imagesToDelete = [deletedProduct.imagen, ...(deletedProduct.imagenes || [])].filter(Boolean);
+    imagesToDelete.forEach(deleteImage);
 
     return res.status(204).send();
   } catch (error) {

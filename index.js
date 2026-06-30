@@ -9,6 +9,7 @@ require('dotenv').config();
 const productsRouter = require('./routes/products');
 const adminRouter = require('./routes/admin');
 const contactRouter = require('./routes/contact');
+const heroRouter = require('./routes/hero');
 const { connectRedis } = require('./db/redis');
 const { cleanupOrphanImages } = require('./cron/cleanup');
 
@@ -55,13 +56,16 @@ app.get('/', (req, res) => {
 app.use('/api/productos', productsRouter);
 app.use('/api/admin', adminRouter);
 app.use('/api/contacto', contactRouter);
+app.use('/api/hero', heroRouter);
 
 const { initDefaultAdmin } = require('./services/adminService');
+const { initializeDefaultHero } = require('./services/heroService');
 
 if (require.main === module) {
   connectRedis()
     .then(async () => {
       await initDefaultAdmin();
+      await initializeDefaultHero();
       app.listen(port, () => {
         console.log(`Servidor escuchando en http://localhost:${port}`);
 
@@ -74,6 +78,7 @@ if (require.main === module) {
       console.error('Error al conectar con Redis:', err.message);
       // Iniciar el servidor de todos modos por si la base de datos Mongo aún funciona
       await initDefaultAdmin().catch(e => console.error('Error init mongo admin:', e));
+      await initializeDefaultHero().catch(e => console.error('Error init mongo hero:', e));
       app.listen(port, () => {
         console.log(`Servidor escuchando en http://localhost:${port} (sin Redis)`);
 

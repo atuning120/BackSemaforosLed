@@ -48,7 +48,22 @@ const limiter = rateLimit({
 });
 app.use('/api', limiter);
 
-// app.use(mongoSanitize()); // Incompatible con Express 5.x por el getter de req.query
+// Middleware de sanitización NoSQL (express-mongo-sanitize) compatible con Express 5.x
+app.use((req, res, next) => {
+  if (req.body) req.body = mongoSanitize.sanitize(req.body);
+  if (req.params) req.params = mongoSanitize.sanitize(req.params);
+  if (req.headers) req.headers = mongoSanitize.sanitize(req.headers);
+  if (req.query) {
+    const sanitizedQuery = mongoSanitize.sanitize(req.query);
+    Object.defineProperty(req, 'query', {
+      value: sanitizedQuery,
+      writable: true,
+      configurable: true,
+      enumerable: true
+    });
+  }
+  next();
+});
 
 app.get('/', (req, res) => {
   res.send('¡Backend funcionando!');

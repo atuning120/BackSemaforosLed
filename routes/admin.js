@@ -1,6 +1,7 @@
 const express = require('express');
 const {
   loginAdmin,
+  generateCaptcha,
   updateAdminCredentialsHandler,
   getAdminHogarElectronico,
   createAdminHogarElectronico,
@@ -20,6 +21,7 @@ const { adminAuth } = require('../middleware/adminAuth');
 
 const router = express.Router();
 
+router.get('/captcha', generateCaptcha);
 router.post('/login', loginAdmin);
 router.get('/verify', adminAuth, (req, res) => res.json({ valid: true, username: req.adminUser }));
 router.put('/credentials', adminAuth, updateAdminCredentialsHandler);

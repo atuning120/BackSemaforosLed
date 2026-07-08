@@ -10,6 +10,7 @@ const productsRouter = require('./routes/products');
 const adminRouter = require('./routes/admin');
 const contactRouter = require('./routes/contact');
 const heroRouter = require('./routes/hero');
+const settingsRouter = require('./routes/settings');
 const { connectRedis } = require('./db/redis');
 const { cleanupOrphanImages } = require('./cron/cleanup');
 
@@ -47,7 +48,22 @@ const limiter = rateLimit({
 });
 app.use('/api', limiter);
 
-// app.use(mongoSanitize()); // Incompatible con Express 5.x por el getter de req.query
+// Middleware de sanitización NoSQL (express-mongo-sanitize) compatible con Express 5.x
+app.use((req, res, next) => {
+  if (req.body) req.body = mongoSanitize.sanitize(req.body);
+  if (req.params) req.params = mongoSanitize.sanitize(req.params);
+  if (req.headers) req.headers = mongoSanitize.sanitize(req.headers);
+  if (req.query) {
+    const sanitizedQuery = mongoSanitize.sanitize(req.query);
+    Object.defineProperty(req, 'query', {
+      value: sanitizedQuery,
+      writable: true,
+      configurable: true,
+      enumerable: true
+    });
+  }
+  next();
+});
 
 app.get('/', (req, res) => {
   res.send('¡Backend funcionando!');
@@ -57,15 +73,18 @@ app.use('/api/productos', productsRouter);
 app.use('/api/admin', adminRouter);
 app.use('/api/contacto', contactRouter);
 app.use('/api/hero', heroRouter);
+app.use('/api/settings', settingsRouter);
 
 const { initDefaultAdmin } = require('./services/adminService');
 const { initializeDefaultHero } = require('./services/heroService');
+const { initDefaultSettings } = require('./services/settingsService');
 
 if (require.main === module) {
   connectRedis()
     .then(async () => {
       await initDefaultAdmin();
       await initializeDefaultHero();
+      await initDefaultSettings();
       app.listen(port, () => {
         console.log(`Servidor escuchando en http://localhost:${port}`);
 
@@ -79,6 +98,7 @@ if (require.main === module) {
       // Iniciar el servidor de todos modos por si la base de datos Mongo aún funciona
       await initDefaultAdmin().catch(e => console.error('Error init mongo admin:', e));
       await initializeDefaultHero().catch(e => console.error('Error init mongo hero:', e));
+      await initDefaultSettings().catch(e => console.error('Error init mongo settings:', e));
       app.listen(port, () => {
         console.log(`Servidor escuchando en http://localhost:${port} (sin Redis)`);
 

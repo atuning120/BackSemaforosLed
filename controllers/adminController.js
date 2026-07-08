@@ -96,24 +96,70 @@ function extractOrderItems(payload) {
 }
 
 const { getSingleAdmin, verifyPassword, updateSingleAdmin } = require('../services/adminService');
+const svgCaptcha = require('svg-captcha');
+const { v4: uuidv4 } = require('uuid');
+const { getFailedAttempts, incrementFailedAttempts, resetFailedAttempts, saveCaptcha, verifyCaptcha } = require('../services/rateLimitService');
+
+async function generateCaptcha(req, res) {
+  try {
+    const captcha = svgCaptcha.createMathExpr({
+      mathMin: 1,
+      mathMax: 9,
+      mathOperator: '+',
+      color: true,
+      background: '#f4f4f4',
+    });
+    const captchaId = uuidv4();
+    await saveCaptcha(captchaId, captcha.text);
+    return res.json({ captchaId, image: captcha.data });
+  } catch (error) {
+    console.error('Error generating captcha:', error);
+    return res.status(500).json({ error: 'Error interno' });
+  }
+}
 
 async function loginAdmin(req, res) {
-  const { username, password: inputPassword } = req.body || {};
+  const { username, password: inputPassword, captchaId, captchaAnswer } = req.body || {};
+  const ip = req.ip || req.connection.remoteAddress;
+
   if (!username || !inputPassword) {
     return res.status(400).json({ error: 'Faltan credenciales' });
   }
 
   try {
+    const failedAttempts = await getFailedAttempts(ip);
+    
+    if (failedAttempts >= 3) {
+      if (!captchaId || !captchaAnswer) {
+        return res.status(403).json({ error: 'Demasiados intentos fallidos. Por favor, resuelve el CAPTCHA.', requireCaptcha: true });
+      }
+      
+      const isCaptchaValid = await verifyCaptcha(captchaId, captchaAnswer);
+      if (!isCaptchaValid) {
+        await incrementFailedAttempts(ip);
+        return res.status(403).json({ error: 'CAPTCHA incorrecto o expirado.', requireCaptcha: true });
+      }
+    }
+
     const adminUser = await getSingleAdmin();
     if (!adminUser || adminUser.username !== username) {
-      return res.status(401).json({ error: 'Credenciales invalidas' });
+      const currentFails = await incrementFailedAttempts(ip);
+      return res.status(401).json({ 
+        error: 'Credenciales invalidas', 
+        requireCaptcha: currentFails >= 3 
+      });
     }
 
     const isValid = verifyPassword(inputPassword, adminUser.hash, adminUser.salt);
     if (!isValid) {
-      return res.status(401).json({ error: 'Credenciales invalidas' });
+      const currentFails = await incrementFailedAttempts(ip);
+      return res.status(401).json({ 
+        error: 'Credenciales invalidas', 
+        requireCaptcha: currentFails >= 3 
+      });
     }
 
+    await resetFailedAttempts(ip);
     const { token, expiresAt } = await createToken(username);
     return res.json({ token, expiresAt });
   } catch (error) {
@@ -431,6 +477,7 @@ async function updateAdminOrderHandler(req, res) {
 
 module.exports = {
   loginAdmin,
+  generateCaptcha,
   updateAdminCredentialsHandler,
   getAdminHogarElectronico,
   createAdminHogarElectronico,

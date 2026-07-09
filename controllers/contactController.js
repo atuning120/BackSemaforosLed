@@ -1,4 +1,5 @@
 const nodemailer = require('nodemailer');
+const path = require('path');
 
 exports.sendContactEmail = async (req, res) => {
   const { email, message, name, targetEmail } = req.body;
@@ -27,7 +28,7 @@ exports.sendContactEmail = async (req, res) => {
     const destination = targetEmail || senderUser;
 
     const mailOptions = {
-      from: `"LedClean" <${senderUser}>`,
+      from: `"SEMAFOROS LED" <${senderUser}>`,
       to: destination, // A dónde llegará el correo
       replyTo: email, // Para que al darle "Responder" le llegue al cliente
       subject: `Nuevo mensaje de contacto web de ${name || email}`,
@@ -72,17 +73,18 @@ exports.sendContactEmail = async (req, res) => {
             <table class="main" width="100%" cellpadding="0" cellspacing="0">
               <tr>
                 <td class="header">
-                  <h1>LED<span>CLEAN</span></h1>
+                  <img src="cid:logo" alt="Semáforos Led" width="200" style="max-width: 200px; margin-bottom: 15px; display: block; margin-left: auto; margin-right: auto;" />
+                  <h1>SEMAFOROS<span>LED</span></h1>
                   <p>Portal de Consultas Corporativas</p>
                 </td>
               </tr>
               <tr>
                 <td class="content">
-                  <p class="greeting">Hola, equipo de LedClean:</p>
+                  <p class="greeting">Hola, equipo de Semáforos Led:</p>
                   <p class="intro">Se ha registrado una nueva consulta a través del formulario oficial de la tienda. A continuación se detallan los datos del cliente y su requerimiento.</p>
                   
                   <div class="details-box">
-                    <p class="details-row"><span class="details-label">Fecha:</span> ${new Date().toLocaleString('es-AR', {timeZone: 'America/Argentina/Buenos_Aires', dateStyle: 'short', timeStyle: 'short'})}</p>
+                    <p class="details-row"><span class="details-label">Fecha:</span> ${new Date().toLocaleString('es-AR', { timeZone: 'America/Argentina/Buenos_Aires', dateStyle: 'short', timeStyle: 'short' })}</p>
                     <p class="details-row"><span class="details-label">Cliente:</span> <strong>${name || 'No especificado'}</strong></p>
                     <p class="details-row" style="margin: 0;"><span class="details-label">Correo:</span> <a href="mailto:${email}" style="color: #3b82f6; text-decoration: none; font-weight: 500;">${email}</a></p>
                   </div>
@@ -97,15 +99,22 @@ exports.sendContactEmail = async (req, res) => {
               </tr>
               <tr>
                 <td class="footer">
-                  <p>&copy; ${new Date().getFullYear()} <strong>LedClean</strong>. Todos los derechos reservados.</p>
-                  <p>Este es un documento confidencial y automatizado emitido por <a href="https://ledclean.ar">ledclean.ar</a>.</p>
+                  <p>&copy; ${new Date().getFullYear()} <strong>Semaforos Led</strong>. Todos los derechos reservados.</p>
+                  <p>Este es un documento confidencial y automatizado emitido por <a href="https://semaforosled.com.ar">https://semaforosled.com.ar</a>.</p>
                 </td>
               </tr>
             </table>
           </center>
         </body>
         </html>
-      `
+      `,
+      attachments: [
+        {
+          filename: 'logo.jpg',
+          path: path.join(__dirname, '../assets/logo.jpg'),
+          cid: 'logo'
+        }
+      ]
     };
 
     await transporter.sendMail(mailOptions);

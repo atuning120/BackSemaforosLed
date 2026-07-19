@@ -2,7 +2,7 @@ const nodemailer = require('nodemailer');
 const path = require('path');
 
 exports.sendContactEmail = async (req, res) => {
-  const { email, message, name, targetEmail } = req.body;
+  const { email, message, name, phone, targetEmail } = req.body;
 
   if (!email || !message) {
     return res.status(400).json({ message: 'El correo y el mensaje son obligatorios.' });
@@ -27,12 +27,27 @@ exports.sendContactEmail = async (req, res) => {
     // Pero el DESTINO del correo sí es el que pidió el frontend (ventas o jvpowerled)
     const destination = targetEmail || senderUser;
 
+    let phoneHtml = '<strong>No especificado</strong>';
+    if (phone) {
+      let cleanPhone = phone.replace(/\D/g, '');
+      // Format to start with 549 for Argentina
+      if (cleanPhone.length === 10) {
+        cleanPhone = `549${cleanPhone}`;
+      } else if (cleanPhone.startsWith('54') && cleanPhone.length === 12) {
+        cleanPhone = `549${cleanPhone.slice(2)}`;
+      } else if (cleanPhone.startsWith('0') && cleanPhone.length === 11) {
+        cleanPhone = `549${cleanPhone.slice(1)}`;
+      }
+      const waLink = `https://wa.me/${cleanPhone}`;
+      phoneHtml = `<a href="${waLink}" target="_blank" style="color: #25D366; text-decoration: none; font-weight: 600;">${phone}`;
+    }
+
     const mailOptions = {
       from: `"SEMAFOROS LED" <${senderUser}>`,
       to: destination, // A dónde llegará el correo
       replyTo: email, // Para que al darle "Responder" le llegue al cliente
       subject: `Nuevo mensaje de contacto web de ${name || email}`,
-      text: `Has recibido un nuevo mensaje de contacto desde la web.\n\nNombre: ${name || 'No especificado'}\nCorreo del cliente: ${email}\nBuzón de destino: ${destination}\n\nMensaje:\n${message}`,
+      text: `Has recibido un nuevo mensaje de contacto desde la web.\n\nNombre: ${name || 'No especificado'}\nCorreo del cliente: ${email}\nTeléfono: ${phone || 'No especificado'}\nBuzón de destino: ${destination}\n\nMensaje:\n${message}`,
       html: `
         <!DOCTYPE html>
         <html>
@@ -86,6 +101,7 @@ exports.sendContactEmail = async (req, res) => {
                   <div class="details-box">
                     <p class="details-row"><span class="details-label">Fecha:</span> ${new Date().toLocaleString('es-AR', { timeZone: 'America/Argentina/Buenos_Aires', dateStyle: 'short', timeStyle: 'short' })}</p>
                     <p class="details-row"><span class="details-label">Cliente:</span> <strong>${name || 'No especificado'}</strong></p>
+                    <p class="details-row"><span class="details-label">Teléfono:</span> ${phoneHtml}</p>
                     <p class="details-row" style="margin: 0;"><span class="details-label">Correo:</span> <a href="mailto:${email}" style="color: #3b82f6; text-decoration: none; font-weight: 500;">${email}</a></p>
                   </div>
 

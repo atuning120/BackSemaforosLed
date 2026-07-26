@@ -12,16 +12,35 @@ async function getSettingsHandler(req, res) {
 
 async function updateSettingsHandler(req, res) {
   try {
-    const { storeAddressName, storeAddressMapUrl } = req.body;
+    const {
+      storeAddressName,
+      storeAddressMapUrl,
+      emailCorporativoTitle,
+      emailCorporativo,
+      emailConsultasTitle,
+      emailConsultas,
+      whatsappSoporteTitle,
+      whatsappSoporte,
+      whatsappComercialTitle,
+      whatsappComercial
+    } = req.body;
     
-    // Validate inputs
+    // Validate inputs - making storeAddress optional or keep it required? Let's keep existing logic.
     if (!storeAddressName || !storeAddressMapUrl) {
       return res.status(400).json({ error: 'Faltan campos requeridos (storeAddressName, storeAddressMapUrl)' });
     }
 
     const updatedSettings = await updateSettings({
       storeAddressName,
-      storeAddressMapUrl
+      storeAddressMapUrl,
+      emailCorporativoTitle,
+      emailCorporativo,
+      emailConsultasTitle,
+      emailConsultas,
+      whatsappSoporteTitle,
+      whatsappSoporte,
+      whatsappComercialTitle,
+      whatsappComercial
     });
 
     res.json({ message: 'Configuraciones actualizadas', settings: updatedSettings });

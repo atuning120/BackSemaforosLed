@@ -39,7 +39,21 @@ async function getHogarElectronicoProducts(skip = 0, limit = 1000) {
 
   console.log('Productos obtenidos desde MongoDB (base de datos)');
   const db = await getDb(DB_NAME);
-  const products = await db.collection(ELECTRONICO_COLLECTION).find({}).skip(skip).limit(limit).toArray();
+  const products = await db.collection(ELECTRONICO_COLLECTION).find({}).toArray();
+
+  products.sort((a, b) => {
+    const orderA = Number.isFinite(Number(a.orden)) ? Number(a.orden) : 0;
+    const orderB = Number.isFinite(Number(b.orden)) ? Number(b.orden) : 0;
+    if (orderA !== orderB) {
+      return orderA - orderB;
+    }
+    const nameA = (a.nombre || '').toString().toLowerCase();
+    const nameB = (b.nombre || '').toString().toLowerCase();
+    if (nameA !== nameB) {
+      return nameA.localeCompare(nameB);
+    }
+    return String(a._id || '').localeCompare(String(b._id || ''));
+  });
 
   try {
     if (redisClient.isOpen && skip === 0 && limit === 1000) {
@@ -50,7 +64,10 @@ async function getHogarElectronicoProducts(skip = 0, limit = 1000) {
     console.error('Error guardando en la caché:', error.message);
   }
 
-  return products;
+  if (skip === 0 && limit === 1000) {
+    return products;
+  }
+  return products.slice(skip, skip + limit);
 }
 
 async function createHogarElectronicoProduct(product) {

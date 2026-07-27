@@ -76,6 +76,11 @@ function normalizeProductPayload(
     result.id_catalogo = payload.id_catalogo;
   }
 
+  if (!partial || hasKey('orden')) {
+    const parsedOrden = Number(payload.orden);
+    result.orden = Number.isFinite(parsedOrden) ? parsedOrden : 0;
+  }
+
   return result;
 }
 

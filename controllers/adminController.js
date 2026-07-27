@@ -221,6 +221,15 @@ async function createAdminHogarElectronico(req, res) {
   const product = normalizeProductPayload(payload, { allowSku: true });
 
   try {
+    if (payload.orden === undefined || payload.orden === null || payload.orden === '') {
+      const existingProducts = await getHogarElectronicoProducts();
+      const maxOrden = existingProducts.reduce((max, p) => {
+        const val = Number(p.orden);
+        return Number.isFinite(val) && val > max ? val : max;
+      }, 0);
+      product.orden = existingProducts.length === 0 ? 1 : maxOrden + 1;
+    }
+
     const created = await createHogarElectronicoProduct(product);
     const { precio, ...sanitized } = created || {};
     return res.status(201).json(sanitized);
